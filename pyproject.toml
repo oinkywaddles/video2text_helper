@@ -1,0 +1,10 @@
+[project]
+name = "video2text-helper"
+version = "0.1.0"
+description = "自动化视频转文字工具"
+requires-python = ">=3.10"
+dependencies = [
+    "yt-dlp>=2024.0.0",
+    "faster-whisper>=1.0.0",
+    "torch>=2.0.0",
+]
