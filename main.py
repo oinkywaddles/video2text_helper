@@ -78,6 +78,14 @@ def main():
     mode_group.add_argument("--transcribe-only", action="store_true",
                            help="仅转写音频文件，不下载视频")
 
+    # 字幕选项
+    subtitle_group = parser.add_argument_group("字幕选项")
+    subtitle_group.add_argument("--no-subtitle", action="store_true",
+                               help="跳过字幕下载，直接使用 Whisper 转写")
+    subtitle_group.add_argument("--subtitle-lang", default=None,
+                               help="字幕语言优先级（逗号分隔），例如 'zh-Hans,en'。"
+                                    "默认：Bilibili=中文优先，YouTube=英文优先")
+
     # 输出选项
     output_group = parser.add_argument_group("输出选项")
     output_group.add_argument("-o", "--output", default=None,
@@ -153,38 +161,126 @@ def main():
 
             print(f"\n✅ 下载完成: {audio_file}")
 
-        # 模式 3: 完整流程（默认）
+        # 模式 3: 完整流程（字幕优先 + Whisper 兜底）
         else:
-            print("🚀 模式: 完整流程（下载 + 转写）")
+            print("🚀 模式: 智能转写（字幕优先）")
             print(f"🔗 视频链接: {args.url_or_file}")
             print()
 
-            # 步骤 1: 下载视频
-            print("📥 步骤 1/2: 下载视频")
-            print("-" * 70)
-            audio_file = download_audio(
-                url=args.url_or_file,
-                output_dir=args.output_dir,
-                proxy=args.proxy,
-                use_cookies=not args.no_cookies
-            )
+            transcript = None
+            method_used = None
+            subtitle_source = None
+            audio_file = None
 
-            if not audio_file:
-                print("\n❌ 下载失败")
-                sys.exit(1)
+            # ===== Phase 1: 尝试字幕下载 =====
+            if not args.no_subtitle:
+                print("📝 步骤 1: 检查字幕")
+                print("-" * 70)
 
-            print(f"\n✅ 下载完成: {audio_file}")
-            print()
+                try:
+                    from subtitle_downloader import (
+                        check_subtitle_availability,
+                        download_subtitle
+                    )
+                    from subtitle_parser import parse_subtitle_file
 
-            # 步骤 2: 转写音频
-            print("🎙️ 步骤 2/2: 转写音频")
-            print("-" * 70)
-            transcript = transcribe_audio(
-                audio_path=audio_file,
-                model_size=args.model,
-                language=args.language,
-                output_format=args.format
-            )
+                    # 检查可用性（快速，无下载视频）
+                    subtitle_info = check_subtitle_availability(
+                        url=args.url_or_file,
+                        proxy=args.proxy,
+                        use_cookies=not args.no_cookies
+                    )
+
+                    if subtitle_info and subtitle_info['has_subtitles']:
+                        print(f"✅ 发现字幕:")
+                        if subtitle_info['manual_subs']:
+                            print(f"   手动: {', '.join(subtitle_info['manual_subs'])}")
+                        if subtitle_info['auto_subs']:
+                            print(f"   自动: {', '.join(subtitle_info['auto_subs'])}")
+                        print()
+
+                        # 下载字幕
+                        print("📥 步骤 2: 下载字幕")
+                        print("-" * 70)
+
+                        language_priority = (
+                            args.subtitle_lang.split(',') if args.subtitle_lang else None
+                        )
+
+                        subtitle_result = download_subtitle(
+                            url=args.url_or_file,
+                            output_dir=args.output_dir,
+                            language_priority=language_priority,
+                            proxy=args.proxy,
+                            use_cookies=not args.no_cookies
+                        )
+
+                        if subtitle_result and subtitle_result['success']:
+                            subtitle_type = "自动生成" if subtitle_result['is_auto'] else "原始"
+                            print()
+
+                            # 解析字幕
+                            print("🔄 步骤 3: 解析字幕")
+                            print("-" * 70)
+
+                            try:
+                                transcript = parse_subtitle_file(subtitle_result['file_path'])
+
+                                if transcript and len(transcript) > 50:
+                                    method_used = "抓取的原字幕"
+                                    subtitle_source = f"{subtitle_type} ({subtitle_result['language']})"
+                                    print(f"✅ 解析成功 ({len(transcript)} 字符)")
+                                else:
+                                    print("⚠️ 字幕内容过短，回退到 Whisper")
+                                    transcript = None
+
+                            except Exception as e:
+                                print(f"⚠️ 字幕解析失败: {e}")
+                                print("ℹ️ 将使用 Whisper 转写")
+                                transcript = None
+                        else:
+                            print("⚠️ 字幕下载失败")
+                    else:
+                        print("ℹ️ 未发现字幕")
+
+                except Exception as e:
+                    print(f"⚠️ 字幕检查失败: {e}")
+
+                if not transcript:
+                    print()
+                    print("ℹ️ 回退到 Whisper 转写")
+                    print()
+
+            # ===== Phase 2: Whisper 兜底 =====
+            if not transcript:
+                print("🎙️ 步骤: Whisper AI 转写")
+                print("-" * 70)
+
+                # 下载音频
+                print("📥 下载音频...")
+                audio_file = download_audio(
+                    url=args.url_or_file,
+                    output_dir=args.output_dir,
+                    proxy=args.proxy,
+                    use_cookies=not args.no_cookies
+                )
+
+                if not audio_file:
+                    print("\n❌ 下载失败")
+                    sys.exit(1)
+
+                print(f"✅ 音频下载完成")
+                print()
+
+                # 转写
+                print("🎙️ 转写音频...")
+                transcript = transcribe_audio(
+                    audio_path=audio_file,
+                    model_size=args.model,
+                    language=args.language,
+                    output_format=args.format
+                )
+                method_used = "AI 听写的"
 
         # 保存转写结果
         if transcript:
@@ -224,6 +320,12 @@ def main():
         print("✅ 任务完成!")
         print("=" * 70)
         print(f"⏱️  总耗时: {format_duration(total_elapsed)}")
+
+        # 显示转写方法
+        if method_used:
+            print(f"📊 转写方法: {method_used}")
+            if subtitle_source:
+                print(f"📝 字幕来源: {subtitle_source}")
 
         if audio_file and not args.download_only:
             print(f"🎵 音频文件: {audio_file}")
