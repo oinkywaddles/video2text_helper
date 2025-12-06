@@ -38,3 +38,13 @@ Thumbs.db
 .pytest_cache/
 .coverage
 htmlcov/
+
+# PyInstaller
+dist/
+build/
+*.manifest
+
+# Privacy
+cookies.txt
+
+# Note: DO NOT ignore *.spec files (needed for CI build)

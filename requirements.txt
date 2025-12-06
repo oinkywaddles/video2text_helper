@@ -37,3 +37,4 @@ tqdm==4.67.1
 typer-slim==0.20.0
 typing-extensions==4.15.0
 yt-dlp==2025.11.12
+pyinstaller>=6.0.0

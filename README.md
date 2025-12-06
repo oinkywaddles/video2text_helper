@@ -1,48 +1,72 @@
-# 🎬 Video2Text Helper
+# Video2Transcript
 
 一键式视频转文字工具，支持 Bilibili 和 YouTube 平台。
 
-## ✨ 功能特性
+> **重要：本软件依赖 FFmpeg，请确保系统已安装：**
+> - **macOS**: `brew install ffmpeg`
+> - **Windows**: [下载 FFmpeg](https://ffmpeg.org/download.html) 并配置环境变量，或将 `ffmpeg.exe` 放在程序同级目录
+> - **Linux**: `sudo apt install ffmpeg`
 
-- 🎥 **视频下载**: 支持 Bilibili 和 YouTube
-- 🎙️ **语音转写**: 使用 faster-whisper (Whisper 优化版)
-- 🌐 **多语言支持**: 自动检测 99+ 种语言
-- ⚡ **高性能**: Apple Silicon M4 优化，处理速度 1.5-2.5x 实时速度
-- 📝 **多格式输出**: 支持 text、SRT、VTT 字幕格式
-- 🔧 **灵活配置**: 命令行参数丰富，支持多种工作模式
+## 下载
 
-## 🚀 快速开始
+从 [Releases](../../releases) 页面下载预编译版本：
 
-### 环境要求
+| 平台 | 文件 | 说明 |
+|------|------|------|
+| Windows | `Video2Transcript.exe` | 双击运行，首次运行需等待模型下载 |
+| macOS | `Video2Transcript-macOS.zip` | 解压后右键点击 App 选择"打开"（首次需绑过 Gatekeeper） |
 
-- macOS (Apple Silicon 推荐) 或 Linux/Windows
+## 功能特性
+
+- **视频下载**: 支持 Bilibili 和 YouTube
+- **语音转写**: 使用 faster-whisper (Whisper 优化版)
+- **字幕优先**: 自动检测并下载视频字幕，无字幕时使用 Whisper 转写
+- **多语言支持**: 自动检测 99+ 种语言
+- **高性能**: Apple Silicon 优化，处理速度 1.5-2.5x 实时速度
+- **多格式输出**: 支持 text、SRT、VTT 字幕格式
+- **GUI 界面**: 提供简洁易用的图形界面 (基于 Flet)
+- **CLI 工具**: 支持命令行操作，适合批量处理
+
+## 快速开始
+
+### 方式一：使用 GUI 应用（推荐）
+
+1. 从 [Releases](../../releases) 下载对应平台的预编译版本
+2. 确保已安装 FFmpeg
+3. 运行程序，粘贴视频链接，点击"开始转换"
+
+### 方式二：从源码运行
+
+#### 环境要求
+
+- macOS / Linux / Windows
 - Python 3.10+
 - FFmpeg
-- uv (Python 包管理器)
+- uv (Python 包管理器，推荐) 或 pip
 
-### 安装步骤
+#### 安装步骤
 
-1. **安装 FFmpeg**
 ```bash
-# macOS
-brew install ffmpeg
+# 克隆仓库
+git clone https://github.com/YOUR_USERNAME/video2text_helper.git
+cd video2text_helper
 
-# Ubuntu/Debian
-sudo apt install ffmpeg
-```
-
-2. **安装依赖**
-```bash
 # 创建虚拟环境
 uv venv
 source .venv/bin/activate  # macOS/Linux
 # 或 .venv\Scripts\activate  # Windows
 
-# 安装 Python 依赖
-uv pip install yt-dlp faster-whisper torch
+# 安装依赖
+uv pip install -r requirements.txt
 ```
 
-### 基本使用
+#### 运行 GUI 应用
+
+```bash
+python app.py
+```
+
+#### 运行 CLI 工具
 
 ```bash
 # 一键完成：下载 + 转写
@@ -52,7 +76,7 @@ python main.py "https://www.bilibili.com/video/BV1xxxxxx"
 python main.py "https://www.youtube.com/watch?v=xxxxxx"
 ```
 
-## 📖 详细用法
+## CLI 详细用法
 
 ### 完整流程（下载 + 转写）
 
@@ -93,7 +117,7 @@ python main.py --transcribe-only audio.mp3 --language zh
 python main.py --transcribe-only audio.mp3 --format vtt
 ```
 
-## 🎛️ 命令行参数
+## 命令行参数
 
 ### 下载选项
 
@@ -119,7 +143,7 @@ python main.py --transcribe-only audio.mp3 --format vtt
 | `--transcribe-only` | 仅转写音频 |
 | `-o, --output` | 指定输出文件路径 |
 
-## 📊 性能数据
+## 性能数据
 
 基于 MacBook Air M4 16GB 测试：
 
@@ -131,30 +155,37 @@ python main.py --transcribe-only audio.mp3 --format vtt
 
 **平均处理速度**: 1.5-2.5x 实时速度
 
-## 🏗️ 项目结构
+## 项目结构
 
 ```
 video2text_helper/
-├── main.py              # 主程序（完整流程）
-├── downloader.py        # 视频下载模块
-├── transcriber.py       # 语音转写模块
-├── url_cleaner.py       # URL 清理工具
-├── test_transcriber.py  # 转写测试脚本
-├── downloads/           # 下载的音频文件
+├── app.py               # GUI 应用入口 (Flet)
+├── main.py              # CLI 工具入口
+├── core/                # 核心业务逻辑模块
+│   ├── __init__.py
+│   ├── task_manager.py      # 任务调度器
+│   ├── download_manager.py  # 下载管理器 (yt-dlp)
+│   ├── transcribe_manager.py # 转写管理器 (Whisper)
+│   ├── subtitle_manager.py  # 字幕管理器
+│   ├── url_cleaner.py       # URL 清理工具
+│   └── config.py            # 平台配置
+├── build.spec           # PyInstaller 打包配置
+├── requirements.txt     # 依赖列表
 ├── pyproject.toml       # 项目配置
-├── README.md            # 本文件
-└── .venv/               # 虚拟环境
+├── downloads/           # 下载文件目录（自动创建）
+└── .github/workflows/   # GitHub Actions 配置
 ```
 
-## 🔧 技术栈
+## 技术栈
 
+- **GUI 框架**: Flet (跨平台桌面应用)
 - **下载引擎**: yt-dlp (支持 1000+ 网站)
 - **转写引擎**: faster-whisper (Whisper 优化版，快 4-5 倍)
 - **音频处理**: FFmpeg
 - **深度学习**: PyTorch
 - **包管理**: uv
 
-## 📝 输出格式
+## 输出格式
 
 ### Text 格式（默认）
 
@@ -187,7 +218,7 @@ WEBVTT
 第二句话的内容
 ```
 
-## 🌟 特性详解
+## 特性详解
 
 ### URL 自动清理
 
@@ -223,7 +254,7 @@ https://www.bilibili.com/video/BV1xxx
 | medium | 1.5 GB | 中等 | 优秀 | **推荐** |
 | large-v3 | 3 GB | 慢 | 最佳 | 高精度需求 |
 
-## 🐛 常见问题
+## 常见问题
 
 ### Q1: FFmpeg 未找到
 ```bash
@@ -259,7 +290,7 @@ https://www.bilibili.com/video/BV1xxx
 - 使用更小的模型：`--model small` 或 `--model base`
 - 关闭其他占用内存的应用
 
-## 📚 使用示例
+## 使用示例
 
 ### 示例 1: 下载 Bilibili 视频并转写为 SRT 字幕
 
@@ -299,43 +330,42 @@ python main.py "视频链接" --download-only
 python main.py --transcribe-only "downloads/视频标题.mp3"
 ```
 
-## 🎯 开发路线图
+## 开发路线图
 
-### 已完成 ✅
+### 已完成
 - [x] 视频下载 (Bilibili, YouTube)
 - [x] 语音转写 (中英文)
 - [x] 多格式输出 (text, SRT, VTT)
 - [x] URL 自动清理
 - [x] Cookie 智能导入
 - [x] 命令行工具
+- [x] GUI 图形界面 (Flet)
+- [x] 字幕优先策略
+- [x] GitHub Actions 自动构建
 
-### 计划中 🔮
+### 计划中
 - [ ] 批量处理支持
 - [ ] 配置文件支持
-- [ ] GUI 图形界面
 - [ ] 更多平台支持
 - [ ] 说话人识别
 - [ ] 实时转录
 
-## 🤝 贡献
+## 贡献
 
 欢迎提交 Issue 和 Pull Request！
 
-## 📄 许可证
+## 许可证
 
 MIT License
 
-## 🙏 致谢
+## 致谢
 
+- [Flet](https://flet.dev/) - 跨平台 GUI 框架
 - [yt-dlp](https://github.com/yt-dlp/yt-dlp) - 强大的视频下载工具
 - [faster-whisper](https://github.com/SYSTRAN/faster-whisper) - Whisper 优化版
 - [OpenAI Whisper](https://github.com/openai/whisper) - 语音识别模型
 
-## 📞 联系方式
+## 联系方式
 
 - 问题反馈: GitHub Issues
 - 功能建议: GitHub Discussions
-
----
-
-**Made with ❤️ using Claude Code**
