@@ -355,6 +355,9 @@ class Video2TextApp:
 
     def _on_log(self, msg: str):
         """日志回调"""
+        # 同时输出到终端
+        print(msg)
+        # 更新 UI
         current = self.log_text.value or ""
         self.log_text.value = current + msg + "\n"
         self.page.update()
