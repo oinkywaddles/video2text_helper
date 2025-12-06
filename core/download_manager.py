@@ -89,6 +89,12 @@ class DownloadTask:
                 log_callback(msg)
 
         log(f"[信息] 获取视频信息...")
+        log(f"[配置] 平台: {self.platform or 'unknown'}")
+        log(f"[配置] Cookie: {'启用 (' + self.cookie_browser + ')' if self.use_cookies else '禁用'}")
+        if self.proxy:
+            log(f"[配置] 代理: {self.proxy}")
+        if self.url != self.original_url:
+            log(f"[配置] URL已清理: {self.original_url} → {self.url}")
 
         ydl_opts = {
             'quiet': True,
@@ -173,6 +179,8 @@ class DownloadTask:
         log(f"[下载] URL: {self.url}")
 
         # 进度钩子
+        last_logged_percent = [0]  # 用列表以便在闭包中修改
+
         def progress_hook(d):
             if self._cancelled:
                 raise Exception("下载已取消")
@@ -184,9 +192,19 @@ class DownloadTask:
                 if total > 0:
                     percent = (downloaded / total) * 100
                     progress(percent)
+                    # 每20%记录一次日志
+                    if int(percent / 20) > int(last_logged_percent[0] / 20):
+                        downloaded_mb = downloaded / (1024 * 1024)
+                        total_mb = total / (1024 * 1024)
+                        log(f"[下载] 进度: {percent:.0f}% ({downloaded_mb:.1f}/{total_mb:.1f} MB)")
+                        last_logged_percent[0] = percent
 
             elif d['status'] == 'finished':
-                log(f"[下载] 下载完成，正在转换...")
+                filename = d.get('filename', '')
+                filesize = d.get('total_bytes', 0) or d.get('downloaded_bytes', 0)
+                filesize_mb = filesize / (1024 * 1024)
+                log(f"[下载] 下载完成: {os.path.basename(filename)} ({filesize_mb:.1f} MB)")
+                log(f"[下载] 正在转换为 MP3...")
                 progress(100.0)
 
         # yt-dlp 配置
@@ -279,12 +297,20 @@ class DownloadTask:
             log("[信息] 该视频没有可用字幕")
             return None
 
+        # 记录可用字幕详情
+        log(f"[字幕] 可用字幕:")
+        if manual_subs:
+            log(f"[字幕]   手动: {', '.join(manual_subs[:10])}{'...' if len(manual_subs) > 10 else ''}")
+        if auto_subs:
+            log(f"[字幕]   自动: {', '.join(auto_subs[:10])}{'...' if len(auto_subs) > 10 else ''}")
+
         # 确定下载哪种字幕
         selected_lang = None
         is_auto = False
 
         # 语言优先级
         lang_priority = self._get_language_priority()
+        log(f"[字幕] 语言优先级: {' > '.join(lang_priority)}")
 
         if language:
             # 用户指定了语言

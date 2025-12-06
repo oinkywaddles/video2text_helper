@@ -10,6 +10,7 @@
 
 import os
 import threading
+import traceback
 from datetime import datetime
 from typing import Optional, Callable, Dict, Any
 from enum import Enum
@@ -111,7 +112,10 @@ class TaskManager:
 
     def _set_status(self, status: TaskStatus):
         """设置状态"""
+        old_status = self._status
         self._status = status
+        if old_status != status:
+            self._log(f"[状态] {old_status.value} → {status.value}")
         if self._status_callback:
             self._status_callback(status)
 
@@ -209,6 +213,8 @@ class TaskManager:
             video_title = video_info['title']
             # 清理文件名中的非法字符
             safe_title = self._sanitize_filename(video_title)
+            if safe_title != video_title:
+                self._log(f"[任务] 文件名清理: {video_title} → {safe_title}")
 
             # 创建输出文件夹: {title}_transcript_YYMMDD-HHMM
             task_folder = self._create_output_folder(output_dir, safe_title)
@@ -218,6 +224,7 @@ class TaskManager:
             # 更新下载任务的输出目录为 intermediate
             self._current_task.output_dir = intermediate_dir
             self._log(f"[任务] 输出目录: {task_folder}")
+            self._log(f"[任务] 中间文件: {intermediate_dir}")
 
             # Step 2: 检查字幕并决定策略
             has_subtitle = False
@@ -356,6 +363,7 @@ class TaskManager:
         except Exception as e:
             self._set_status(TaskStatus.ERROR)
             self._log(f"[错误] 任务失败: {e}")
+            self._log(f"[错误] 详细信息:\n{traceback.format_exc()}")
             self._complete(False, error=str(e))
 
     def cancel(self):

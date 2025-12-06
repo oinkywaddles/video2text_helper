@@ -78,12 +78,24 @@ class WhisperModelManager:
         if device == "auto":
             try:
                 import torch
-                device = "cuda" if torch.cuda.is_available() else "cpu"
+                if torch.cuda.is_available():
+                    device = "cuda"
+                    gpu_name = torch.cuda.get_device_name(0)
+                    log(f"[设备] 检测到 GPU: {gpu_name}")
+                else:
+                    device = "cpu"
+                    log(f"[设备] 未检测到 GPU，使用 CPU")
             except ImportError:
                 device = "cpu"
+                log(f"[设备] PyTorch 未安装 CUDA 支持，使用 CPU")
 
         # 根据设备选择计算精度
         compute_type = "float16" if device == "cuda" else "int8"
+
+        # 模型大小信息
+        model_info = MODEL_SIZES.get(model_size, {})
+        if model_info:
+            log(f"[模型] {model_info.get('name', model_size)}: {model_info.get('desc', '')} (~{model_info.get('size_mb', '?')} MB)")
 
         # 热启动检查：如果模型已加载且参数相同，直接复用
         if (self._model is not None and
