@@ -46,6 +46,7 @@ jobs:
         run: pyinstaller build.spec
 
       - name: List dist directory
+        shell: bash
         run: ls -la dist/
 
       - name: Upload artifact (Windows)
