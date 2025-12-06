@@ -47,4 +47,7 @@ build/
 # Privacy
 cookies.txt
 
+# Development notes
+dev_notes/
+
 # Note: DO NOT ignore *.spec files (needed for CI build)
