@@ -11,10 +11,11 @@ jobs:
       matrix:
         include:
           - os: windows-latest
-            artifact_name: Video2Transcript.exe
-            artifact_path: dist/Video2Transcript.exe
+            artifact_name: Video2Transcript-Windows
+            # onedir 模式：输出为文件夹
+            artifact_path: dist/Video2Transcript
           - os: macos-latest
-            artifact_name: Video2Transcript.app
+            artifact_name: Video2Transcript-macOS
             artifact_path: dist/Video2Transcript.app
 
     runs-on: ${{ matrix.os }}
@@ -47,14 +48,25 @@ jobs:
 
       - name: List dist directory
         shell: bash
-        run: ls -la dist/
+        run: |
+          echo "=== dist/ contents ==="
+          ls -la dist/
+          echo "=== Video2Transcript folder/app contents ==="
+          ls -la dist/Video2Transcript* || true
+
+      - name: Compress Windows build
+        if: runner.os == 'Windows'
+        shell: bash
+        run: |
+          cd dist
+          7z a -tzip Video2Transcript-Windows.zip Video2Transcript/
 
       - name: Upload artifact (Windows)
         if: runner.os == 'Windows'
         uses: actions/upload-artifact@v4
         with:
           name: Video2Transcript-Windows
-          path: ${{ matrix.artifact_path }}
+          path: dist/Video2Transcript-Windows.zip
           retention-days: 30
 
       - name: Compress macOS app
@@ -101,7 +113,7 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           files: |
-            artifacts/windows/Video2Transcript.exe
+            artifacts/windows/Video2Transcript-Windows.zip
             artifacts/macos/Video2Transcript-macOS.zip
           generate_release_notes: true
           draft: false

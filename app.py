@@ -432,6 +432,11 @@ def main(page: ft.Page):
 
 
 if __name__ == "__main__":
+    # 修复打包环境下 exit() 未定义的问题
+    import builtins
+    if not hasattr(builtins, 'exit'):
+        builtins.exit = sys.exit
+
     # 防止 PyInstaller 打包后的无限进程递归（Fork Bomb）
     multiprocessing.freeze_support()
     ft.app(target=main)
