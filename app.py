@@ -9,9 +9,11 @@ Video2Text Helper - GUI 应用
 - 多种输出格式
 """
 
+import multiprocessing
 import os
 import subprocess
 import sys
+
 import flet as ft
 
 from core import TaskManager, TaskStatus, WhisperModelManager
@@ -430,4 +432,6 @@ def main(page: ft.Page):
 
 
 if __name__ == "__main__":
+    # 防止 PyInstaller 打包后的无限进程递归（Fork Bomb）
+    multiprocessing.freeze_support()
     ft.app(target=main)
