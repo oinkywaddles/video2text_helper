@@ -9,8 +9,11 @@ Whisper 模型管理器
 
 import os
 import time
-from typing import Optional, Callable, Generator, Any
-from faster_whisper import WhisperModel
+from typing import Optional, Callable, Any, TYPE_CHECKING
+
+# 延迟加载：避免启动时加载 torch，仅在运行时按需导入
+if TYPE_CHECKING:
+    from faster_whisper import WhisperModel
 
 
 # 模型大小映射（用于显示）
@@ -31,7 +34,7 @@ class WhisperModelManager:
     """
 
     def __init__(self):
-        self._model: Optional[WhisperModel] = None
+        self._model: Optional["WhisperModel"] = None
         self._current_model_size: Optional[str] = None
         self._current_device: Optional[str] = None
         self._current_compute_type: Optional[str] = None
@@ -107,6 +110,10 @@ class WhisperModelManager:
         # 需要加载新模型
         log(f"[模型] 正在加载: {model_size}")
         log(f"[设备] {device} (精度: {compute_type})")
+
+        # 延迟导入：只有在需要加载模型时才导入 faster_whisper
+        log("[引擎] 正在加载 Whisper 引擎...")
+        from faster_whisper import WhisperModel
 
         # 如果有旧模型，先释放
         if self._model is not None:
